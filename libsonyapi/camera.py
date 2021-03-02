@@ -5,10 +5,20 @@ import xml.etree.ElementTree as ET
 
 
 class Camera(object):
-    def __init__(self):
+    
+    def __init__(self, interface=None):
         """
         create camera object
+        Optional parameter to specify the interface to bind to.
+        Needed when there are multiple interfaces active.
         """
+
+        if interface is not None:
+            print("Camera:Interface: {}".format(interface))
+        else:
+            print("Camera:Interface is None")
+
+        self.interface = interface
         self.xml_url = self.discover()
         self.name, self.api_version, self.services = self.connect(self.xml_url)
         self.camera_endpoint_url = self.services["camera"] + "/camera"
@@ -16,7 +26,7 @@ class Camera(object):
         # prepare camera for rec mode
         if "startRecMode" in self.available_apis[0]:
             self.do("startRecMode")
-        self.available_apis = self.do("getAvailableApiList")["result"]
+        self.available_apis = self.do("getAvailableApiList")["result"] 
         self.connected = False
 
     def discover(self):
@@ -32,7 +42,10 @@ class Camera(object):
             "\r\n"
         ).encode()
         # Set up UDP socket
+        if not hasattr(socket, 'SO_BINDTODEVICE'): socket.SO_BINDTODEVICE = 25
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        if self.interface is not None:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, self.interface.encode())
         s.settimeout(2)
         s.sendto(msg, ("239.255.255.250", 1900))
         try:
